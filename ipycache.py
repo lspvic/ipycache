@@ -8,7 +8,7 @@ long-lasting computations.
 #------------------------------------------------------------------------------
 
 # Stdlib
-import inspect, os, sys, textwrap, re
+import inspect, os, sys, textwrap, re, binascii
 
 # Our own
 from traitlets.config.configurable import Configurable
@@ -323,12 +323,12 @@ class CacheMagics(Magics, Configurable):
      
     @magic_arguments.magic_arguments()
     @magic_arguments.argument(
-        'to', nargs=1, type=str,
-        help="Path to the file containing the cached variables."
-    )
-    @magic_arguments.argument(
         'vars', nargs='*', type=str,
         help="Variables to save."
+    )
+    @magic_arguments.argument(
+        '-t', '--to',
+        help="Path to the file containing the cached variables."
     )
     @magic_arguments.argument(
         '-s', '--silent', action='store_true', default=False,
@@ -367,11 +367,23 @@ class CacheMagics(Magics, Configurable):
         args = magic_arguments.parse_argstring(self.cache, line)
         code = cell if cell.endswith('\n') else cell+'\n'
         vars = clean_vars(args.vars)
-        path = conditional_eval(args.to[0], ip.user_ns)
+        if args.to:
+            path = conditional_eval(args.to, ip.user_ns)
+            _path = None
+        else:
+            if args.read:
+                import warnings
+                warnings.warn("file name not specified but try to read,"
+                    " read option(-r, --read) will be ignored")
+                args.read = False
+            _path = path = "{0:s}.pkl".format(
+                binascii.hexlify(os.urandom(5)).decode())
+
         cachedir_from_path = os.path.split(path)[0]
         # The cachedir can be specified with --cachedir or inferred from the
         # path or in ipython_config.py
-        cachedir = args.cachedir or cachedir_from_path or self.cachedir
+        cachedir = (args.cachedir or cachedir_from_path
+            or self.cachedir or ".ipycache")
         # If path is relative, use the user-specified cache cachedir.
         if not os.path.isabs(path) and cachedir:
             # Try to create the cachedir if it does not already exist.
@@ -390,6 +402,10 @@ class CacheMagics(Magics, Configurable):
               ip_push=ip.push,
               ip_clear_output=clear_output
               )
+        if _path:
+            ip.set_next_input(
+                '%%cache -t {} {}\n{}'.format(_path, line, cell),
+                replace=True)
 
 def load_ipython_extension(ip):
     """Load the extension in IPython."""

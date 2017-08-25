@@ -5,6 +5,34 @@
 
 Defines a %%cache cell magic in the IPython notebook to cache results and outputs of long-lasting computations in a persistent pickle file. Useful when some computations in a notebook are long and you want to easily save the results in a file.
 
+Notes!
+-------
+  * This fork adds the feature that automatically gives a random file path to save the variables to be cached, getting rid of the annoying naming, especially when a big notebook have a few cells and variable cells to be cached.
+  * This change breaks the compatibility with ipycache, when create magic cells, you should write like this:
+
+         %%cache var1 var2
+        var1 = 1
+        var2 = 2
+
+  * After executing the cell, the cell changes to something like below, the file is randomly named with 10 length hex representation.
+
+        %%cache -t 213bd3a86d.pkl var1 var2
+        var1 = 1
+        var2 = 2
+  * The random named file will be saved default to `.ipycache` folder(previsouly current directory). If `--cachedir` or `-d` option or default directory used, these directories are used as previously.
+
+  * Previously manualed file name is available except add a `-t` or `--to` option:
+
+        %%cache -t mycache.pkl var1 var2
+        var1 = 1
+        var2 = 2
+
+  * Modify ipython import deprecation warning.
+
+  * Install this feature:
+
+        pip install -U git+https://github.com/lspvic/ipycache.git
+
 Example
 -------
 
